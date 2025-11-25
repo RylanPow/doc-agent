@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 import uuid
 import os
 import datetime
+from data_loader import load_and_chunk_pdf, embed_texts
+from vector_db import QdrantClient
+
+from custom_types import RAGChunkAndSrc, RAGQuueryResult, RAGSeearchResult, RAGUpsertResult
 
 #run with: uv run uvicorn main:app     , file is main,py, uv function is app
 
