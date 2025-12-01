@@ -11,7 +11,7 @@ from data_loader import load_and_chunk_pdf, embed_texts
 from vector_db import QdrantStorage
 import google.generativeai as genai
 
-from custom_types import RAGChunkAndSrc, RAGQuueryResult, RAGSeearchResult, RAGUpsertResult
+from custom_types import RAGChunkAndSrc, RAGQueryResult, RAGSearchResult, RAGUpsertResult
 
 #run with: uv run uvicorn main:app - file is main,py, uv function is app
 
@@ -65,12 +65,12 @@ async def rag_query_pdf_ai(ctx: inngest.Context):
         query_vec = embed_texts([question])[0]
         store = QdrantStorage()
         found = store.search(query_vec, top_k)
-        return RAGSeearchResult(contexts=found["contexts"], sources=found["sources"])
+        return RAGSearchResult(contexts=found["contexts"], sources=found["sources"])
 
     question = ctx.event.data["question"]
     top_k = int(ctx.event.data.get("top_k", 5))
 
-    found = await ctx.step.run("embed-and-search", lambda: _search(question, top_k), output_type=RAGSeearchResult)
+    found = await ctx.step.run("embed-and-search", lambda: _search(question, top_k), output_type=RAGSearchResult)
 
     context_block = "\n\n".join(f"- {c}" for c in found.contexts)
     user_content = (
@@ -80,7 +80,7 @@ async def rag_query_pdf_ai(ctx: inngest.Context):
         "Answer concisely using the context above."
     )
     answer = await ctx.step.run("llm-answer", lambda:_get_gemini_response(user_content))
-    return {"answer": answer, "sources": found.sources, "nume_contexts": len(found.contexts)}
+    return {"answer": answer, "sources": found.sources, "num_contexts": len(found.contexts)}
 
 def _get_gemini_response(user_content: str) -> str:
     model = genai.GenerativeModel('gemini-2.0-flash')

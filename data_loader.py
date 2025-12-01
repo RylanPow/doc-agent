@@ -22,22 +22,41 @@ def load_and_chunk_pdf(path: str):
         chunks.extend(splitter.split_text(t))
     return chunks 
 
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
+    if not texts:
+        return []
+    
+    # Single text (query)
     if len(texts) == 1:
         result = genai.embed_content(
             model=EMBED_MODEL,
             content=texts[0],
-            task_type="retrieval_query" if len(texts) == 1 else "retrieval_document"
+            task_type="retrieval_query"
         )
         return [result['embedding']]
     
-    embeddings = []
+    BATCH_SIZE = 100
+    all_embeddings = []
     
-    for text in texts:
-        result = genai.embed_content(
-            model=EMBED_MODEL,
-            content=text,
-            task_type="retrieval_document"
-        )
-        embeddings.append(result['embedding'])
-    return embeddings
+    for i in range(0, len(texts), BATCH_SIZE):
+        batch = texts[i:i + BATCH_SIZE]
+        try:
+            result = genai.embed_content(
+                model=EMBED_MODEL,
+                content=batch,
+                task_type="retrieval_document"
+            )
+            all_embeddings.extend(result['embeddings'])
+        except Exception as e:
+            print(f"Batch {i//BATCH_SIZE} failed, processing sequentially: {e}")
+            for text in batch:
+                single_result = genai.embed_content(
+                    model=EMBED_MODEL,
+                    content=text,
+                    task_type="retrieval_document"
+                )
+                all_embeddings.append(single_result['embedding'])
+        
+    
+    return all_embeddings
