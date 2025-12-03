@@ -74,7 +74,7 @@ def fetch_runs(event_id: str) -> list[dict]:
     return data.get("data", [])
 
 
-def wait_for_run_output(event_id: str, timeout_s: float = 240.0, poll_interval_s: float = 0.5) -> dict:
+def wait_for_run_output(event_id: str, timeout_s: float = 240.0, poll_interval_s: float = 2) -> dict:
     start = time.time()
     last_status = None
 

@@ -9,15 +9,14 @@ import os
 import datetime
 from data_loader import load_and_chunk_pdf, embed_texts
 from vector_db import QdrantStorage
-import google.generativeai as genai
-
+from google import genai
 from custom_types import RAGChunkAndSrc, RAGQueryResult, RAGSearchResult, RAGUpsertResult
 
 #run with: uv run uvicorn main:app - file is main,py, uv function is app
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 inngest_client = inngest.Inngest(
     app_id="rag_app",
@@ -51,7 +50,7 @@ async def rag_ingest_pdf(ctx: inngest.Context):
 
     
     chunks_and_src = await ctx.step.run("load-and-chunk", lambda: _load(ctx), output_type=RAGChunkAndSrc)
-    ingested = await ctx.step.run("embed-and_upsert", lambda: _upsert(chunks_and_src), output_type=RAGUpsertResult)
+    ingested = await ctx.step.run("embed-and-upsert", lambda: _upsert(chunks_and_src), output_type=RAGUpsertResult)
 
     return ingested.model_dump() # turn pydantic model into json/python dict; functions need to return something *serializable*
 
@@ -83,15 +82,16 @@ async def rag_query_pdf_ai(ctx: inngest.Context):
     return {"answer": answer, "sources": found.sources, "num_contexts": len(found.contexts)}
 
 def _get_gemini_response(user_content: str) -> str:
-    model = genai.GenerativeModel('gemini-2.0-flash')
-    response = model.generate_content(
-        user_content,
-        generation_config=genai.types.GenerationConfig(
-            max_output_tokens=1024,
-            temperature=0.2
-        )
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=user_content,
+        config={
+            "max_output_tokens": 1024,
+            "temperature": 0.2
+        }
     )
     return response.text.strip()
+
 
 app = FastAPI()
 
